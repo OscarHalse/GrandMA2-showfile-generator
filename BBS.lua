@@ -16,74 +16,6 @@ end
 local init = false
 
 
-----------------------------------------------------------------------
------------------------------- NUKELIST ------------------------------
-----------------------------------------------------------------------
-
-local function add_to_nukelist(item_type, item_number)
-	local success, return_val = pcall(function()
-	
-		if BBL.is_recognized_pool_object(item_type) == false then
-			error("Attempted to add unrecognized item type: " .. item_type .. " with number: " .. item_number .. " to nukelist. Aborting.")
-			return
-		end
-
-		local LEN_NUKELIST = BBL.getvar("LEN_NUKELIST")
-		if type(item_number) == "string" then
-			BBL.setvar(string.format("NUKELIST_%d", LEN_NUKELIST + 1), string.format("%s %s", item_type, item_number))
-		elseif type(item_number) == "number" then
-			BBL.setvar(string.format("NUKELIST_%d", LEN_NUKELIST + 1), string.format("%s %.0f", item_type, item_number))
-		else
-			return "Item number was of an urecognised type"
-		end
-		BBL.setvar("LEN_NUKELIST", string.format("%d", LEN_NUKELIST + 1))
-
-
-	end)
-	if success ~= true then
-		BBL.print(string.format("ERROR in add_to_nukelist: %s", return_val))
-	end
-end
-
-local function add_to_var_nukelist(variable_name)
-	local cur_len = tonumber(BBL.getvar("LEN_VAR_NUKE"))
-	local new_len = cur_len + 1
-	
-	if cur_len == nil then
-		BBL.print("ERROR in add_to_var_nukelist. Aborting")
-		return
-	end
-
-	BBL.setvar(string.format('VAR_NUKE_%d', new_len), variable_name)
-	BBL.setvar(string.format('LEN_VAR_NUKE'), tostring(new_len))
-end
-
-local function setvar_and_mark_for_deletion_on_nuke(var, value)
-	if value == nil then 
-		error("ERROR in setvar_and_mark_for_deletion_on_nuke, value was nil. Aborting.")
-		return
-	end
-
-	local cur_val = BBL.getvar(var)
-	if cur_val == nil then
-		add_to_var_nukelist(var)
-	end
-	BBL.setvar(var, value)
-end
-
-local function delete_group_config_variables()
-	local success, return_val = pcall(function()
-
-	for _, group in BBL.get_gen_groups() do
-		BBL.cmd(string.format("setuservar GROUP_%s_CONFIG = \"¨\"), group %s", group))
-	end
-
-	end)
-	if success ~= true then
-		BBL.print(string.format("ERROR in get_group_config: %s", return_val))
-	end
-end
-
 
 ---------------------------------------------------------------------
 ------------------------------- BUILD -------------------------------
@@ -98,7 +30,6 @@ local function build_config_button(name, exec, color, goto_options_and_cmds)
 	local exec_exists = gma.show.getobj.verify(exec_handle)
 	if exec_exists == false then
 		local seq_num = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
-		add_to_nukelist(BBL.SEQUENCE, seq_num)
 		
 		BBL.cmd(string.format('BlindEdit ON'))
 		BBL.cmd(string.format('ClearAll'))
@@ -123,7 +54,7 @@ local function build_config_button(name, exec, color, goto_options_and_cmds)
 
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in build_button: %s", return_val))
+		BBL.error(string.format("ERROR in build_button: %s", return_val))
 	end
 
 	return return_val
@@ -185,7 +116,7 @@ local function build_config_grid()
 
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in build_default_group_config_buttons: %s", error))
+		BBL.error(string.format("ERROR in build_default_group_config_buttons: %s", error))
 	end
 end
 
@@ -193,7 +124,7 @@ end
 local function apply_group_config(group_configs)
 	local success, err = pcall(function()
 	
-		-- BBL.print(string.format("Performing action: apply_group_config for group %d with config %s", group_configs.group_number, tostring(group_configs)))
+		-- BBL.print(string.format("Performing action: apply_group_config for group %d with config %s", group_configs.group_number, string.format("%.0f", group_configs)))
 		local rigging_config 	= BBL.shallow_copy(group_configs.rigging_config)	-- probably not necessary, but since add_to_group_config
 		local attribute_config 	= BBL.shallow_copy(group_configs.attribute_config)  -- also touches group_config.rigging_config, I am doing this to be sure
 
@@ -209,11 +140,13 @@ local function apply_group_config(group_configs)
 
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in apply_group_config: %s", err))
+		BBL.error(string.format("ERROR in apply_group_config: %s", err))
 	end
 end
 
 local function build_subgroups()
+	local success, err = pcall(function()
+	
 	local gen_groups = BBL.get_gen_groups()
 	for _, group_num in ipairs(gen_groups) do
 
@@ -228,28 +161,28 @@ local function build_subgroups()
 		
 		if L1_group_master_exec == nil then
 			L1_group_master_exec = BBL.reserve_next_available_remote(BBL.FADER_REMOTE)
-			add_to_nukelist(BBL.EXEC, L1_group_master_exec)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L1_GROUP_MASTER_EXEC", group_num), L1_group_master_exec)
+			BBL.add_to_nukelist(BBL.EXEC, L1_group_master_exec)
+			BBL.setvar(string.format("GROUP_%.0f_L1_GROUP_MASTER_EXEC", group_num), L1_group_master_exec)
 		end
 		if L2_group_master_exec == nil then
 			L2_group_master_exec = BBL.reserve_next_available_remote(BBL.FADER_REMOTE)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L2_GROUP_MASTER_EXEC", group_num), L2_group_master_exec)
+			BBL.setvar(string.format("GROUP_%.0f_L2_GROUP_MASTER_EXEC", group_num), L2_group_master_exec)
 		end
 		if L3_group_master_exec == nil then
 			L3_group_master_exec = string.format("%.0f.%.0f", BBL.GROUP_L3_MASTER_PAGE, 1 + group_num - BBL.FIRST_GROUP_TO_GENERATE_FROM)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L3_GROUP_MASTER_EXEC", group_num), L3_group_master_exec)
+			BBL.setvar(string.format("GROUP_%.0f_L3_GROUP_MASTER_EXEC", group_num), L3_group_master_exec)
 		end
 		if L1_stomp_exec == nil then
 			L1_stomp_exec = BBL.reserve_next_available_remote(BBL.FADER_REMOTE_FLIPPED)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L1_STOMP_EXEC", group_num), L1_stomp_exec)
+			BBL.setvar(string.format("GROUP_%.0f_L1_STOMP_EXEC", group_num), L1_stomp_exec)
 		end
 		if L2_stomp_exec == nil then
 			L2_stomp_exec = BBL.reserve_next_available_remote(BBL.FADER_REMOTE_FLIPPED)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L2_STOMP_EXEC", group_num), L2_stomp_exec)
+			BBL.setvar(string.format("GROUP_%.0f_L2_STOMP_EXEC", group_num), L2_stomp_exec)
 		end
 		if L3_stomp_exec == nil then
 			L3_stomp_exec = BBL.reserve_next_available_remote(BBL.FADER_REMOTE_FLIPPED)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L3_STOMP_EXEC", group_num), L3_stomp_exec)
+			BBL.setvar(string.format("GROUP_%.0f_L3_STOMP_EXEC", group_num), L3_stomp_exec)
 		end
 		
 		
@@ -263,17 +196,15 @@ local function build_subgroups()
 		
 		if L2_group == nil then
 			L2_group = BBL.reserve_next_available_pool_item(BBL.GROUP)
-			add_to_nukelist(BBL.GROUP, L2_group)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L2_GROUP", group_num), tostring(L2_group))
+			BBL.setvar(string.format("GROUP_%.0f_L2_GROUP", group_num), string.format("%.0f", L2_group))
 		end
 		if L3_group == nil then
 			L3_group = BBL.reserve_next_available_pool_item(BBL.GROUP)
-			add_to_nukelist(BBL.GROUP, L3_group)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L3_GROUP", group_num), tostring(L3_group))
+			BBL.setvar(string.format("GROUP_%.0f_L3_GROUP", group_num), string.format("%.0f", L3_group))
 		end
-		setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L1_STOMP_FIXTURE", group_num), L1_stomp_fixture)
-		setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L2_STOMP_FIXTURE", group_num), L2_stomp_fixture)
-		setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L3_STOMP_FIXTURE", group_num), L3_stomp_fixture)
+		BBL.setvar(string.format("GROUP_%.0f_L1_STOMP_FIXTURE", group_num), L1_stomp_fixture)
+		BBL.setvar(string.format("GROUP_%.0f_L2_STOMP_FIXTURE", group_num), L2_stomp_fixture)
+		BBL.setvar(string.format("GROUP_%.0f_L3_STOMP_FIXTURE", group_num), L3_stomp_fixture)
 		
 		-------------------------------------------------------------------------------------------------------
 		------------------------------------------------ BUILD ------------------------------------------------
@@ -305,24 +236,21 @@ local function build_subgroups()
 		
 		if L1_stomp_seq == nil then
 			L1_stomp_seq = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
-			add_to_nukelist(BBL.SEQUENCE, L1_stomp_seq)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L1_STOMP_SEQ", group_num), tostring(L1_stomp_seq))
+			BBL.setvar(string.format("GROUP_%.0f_L1_STOMP_SEQ", group_num), string.format("%.0f", L1_stomp_seq))
 			BBL.cmd(string.format('store sequence %.0f cue 1 /o /nc', L1_stomp_seq))
 			BBL.cmd(string.format('assign sequence %.0f %s', L1_stomp_seq, BBL.GROUP_MASTER_STOMP_SEQ_OPTION))
 			BBL.cmd(string.format('label sequence %.0f "%s"', L1_stomp_seq, string.format("GROUP_%.0f L1_STOMP", group_num)))
 		end
 		if L2_stomp_seq == nil then
 			L2_stomp_seq = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
-			add_to_nukelist(BBL.SEQUENCE, L2_stomp_seq)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L2_STOMP_SEQ", group_num), tostring(L2_stomp_seq))
+			BBL.setvar(string.format("GROUP_%.0f_L2_STOMP_SEQ", group_num), string.format("%.0f", L2_stomp_seq))
 			BBL.cmd(string.format('store sequence %.0f cue 1 /o /nc', L2_stomp_seq))
 			BBL.cmd(string.format('assign sequence %.0f %s', L2_stomp_seq, BBL.GROUP_MASTER_STOMP_SEQ_OPTION))
 			BBL.cmd(string.format('label sequence %.0f "%s"', L2_stomp_seq, string.format("GROUP_%.0f L2_STOMP", group_num)))
 		end
 		if L3_stomp_seq == nil then
 			L3_stomp_seq = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
-			add_to_nukelist(BBL.SEQUENCE, L3_stomp_seq)
-			setvar_and_mark_for_deletion_on_nuke(string.format("GROUP_%.0f_L3_STOMP_SEQ", group_num), tostring(L3_stomp_seq))
+			BBL.setvar(string.format("GROUP_%.0f_L3_STOMP_SEQ", group_num), string.format("%.0f", L3_stomp_seq))
 			BBL.cmd(string.format('store sequence %.0f cue 1 /o /nc', L3_stomp_seq))
 			BBL.cmd(string.format('assign sequence %.0f %s', L3_stomp_seq, BBL.GROUP_MASTER_STOMP_SEQ_OPTION))
 			BBL.cmd(string.format('label sequence %.0f "%s"', L3_stomp_seq, string.format("GROUP_%.0f L3_STOMP", group_num)))
@@ -333,8 +261,7 @@ local function build_subgroups()
 		local stomp_template = BBL.getvar(BBL.DIM_STOMP_TEMPLATE_EFFECT)
 		if stomp_template == nil then
 			stomp_template = BBL.reserve_next_available_pool_item(BBL.EFFECT)
-			-- add_to_nukelist(BBL.EFFECT, stomp_template) -- Effects are not part of nukelist, but handled seperately
-			setvar_and_mark_for_deletion_on_nuke(BBL.DIM_STOMP_TEMPLATE_EFFECT, stomp_template)
+			BBL.setvar(BBL.DIM_STOMP_TEMPLATE_EFFECT, string.format("%.0f", stomp_template))
 
 			BBL.cmd(string.format("store effect %0.f /o", stomp_template))
 			BBL.cmd(string.format("store effect 1.%0.f.1 /o", stomp_template))
@@ -390,19 +317,18 @@ local function build_subgroups()
 
 	end
 
-
-	-- for i = 1, 10 do
-	-- 	BBL.print(string.format("Next available normal remote = %s", BBL.reserve_next_available_remote(BBL.FADER_REMOTE)))
-	-- 	BBL.print(string.format("Next available flipped remote = %s", BBL.reserve_next_available_remote(BBL.FADER_REMOTE_FLIPPED)))
-	-- end
+	end)
+	if success ~= true then
+		BBL.error(string.format("ERROR in apply_group_config: %s", err))
+	end
 end
 
 local function build_selectives()
 	local success, err = pcall(function()
 
 	-- BBL.print("build_selectives called")
-	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.TEMPLATE_START)
-	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.TEMPLATE_START + #dim_templates + gap_from_start)
+	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
+	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
 	local groups 						= BBL.get_gen_groups()
 
 	-- BBL.print(string.format("Dimmer templates = {%s} with gap from start = %s", table.concat(dim_templates, ", "), gap_from_start))
@@ -420,10 +346,10 @@ local function build_selectives()
 		
 		if has_dimmer == true then
 			for _, template in ipairs(dim_templates) do
-				local selective = BBL.getvar(string.format('group_%.0f_dim_%.0f_selective', group_num, template))
+				local selective = BBL.getvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_DIM, template))
 				if selective == nil then
 					selective = BBL.reserve_next_available_pool_item(BBL.EFFECT)
-					add_to_var_nukelist(string.format('GROUP_%.0f_DIM_%.0f_SELECTIVE', group_num, template))
+					BBL.setvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_DIM, template), string.format("%.0f", selective))
 				end
 
 				local L1_group 			= string.format("%.0f", group_num)
@@ -464,25 +390,24 @@ local function build_selectives()
 				BBL.cmd(string.format('fixture "%s"', L3_stomp_fixture))
 				BBL.cmd(string.format('store effect 1.%s.6 /o /nc', selective))
 
-				BBL.cmd(string.format('label effect %.0f group_%.0f_dim_%.0f', selective, group_num, template))				
-				BBL.setvar(string.format('GROUP_%.0f_DIM_%.0f_SELECTIVE', group_num, template), selective)
+				BBL.cmd(string.format('label effect %.0f "G%.0f D_%.0f"', selective, group_num, template))				
 			end
 		end
 
 		if has_mov == true then
 			for _, template in ipairs(mov_templates) do
-				local selective = BBL.getvar(string.format('GROUP_%.0f_mov_%.0f_selective', group_num, template))
+				local selective = BBL.getvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_MOV, template))
 				if selective == nil then
 					selective = BBL.reserve_next_available_pool_item(BBL.EFFECT)
+					BBL.setvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_MOV, template), selective)
 				end
-				add_to_var_nukelist(string.format('GROUP_%.0f_MOV_%.0f_SELECTIVE', group_num, template))
+				
 				BBL.cmd("ClearAll")
 				BBL.cmd(string.format('copy effect %.0f at %.0f /nc', template, selective))
 				BBL.cmd(string.format('group %.0f', group_num))
 				BBL.cmd(string.format('store effect 1.%.0f.* /nc', selective))
 				BBL.cmd(string.format('Effect 1.%.0f Property "Selective" "Yes"', selective))
-				BBL.cmd(string.format('label effect %.0f group_%.0f_mov_%.0f', selective, group_num, template))				
-				BBL.setvar(string.format('GROUP_%.0f_MOV_%.0f_SELECTIVE', group_num, template), selective)
+				BBL.cmd(string.format('label effect %.0f "G%.0f M_%.0f"', selective, group_num, template))				
 			end
 		end
 
@@ -491,17 +416,17 @@ local function build_selectives()
 	
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in build_selectives: %s", err))
+		BBL.error(string.format("ERROR in build_selectives: %s", err))
 	end
 end
 
 
-local function build_multiseqs()
+local function build_pbg_multiseqs()
 	local success, err = pcall(function()
 
 	local gen_groups 					= BBL.get_gen_groups()
-	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.TEMPLATE_START)
-	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.TEMPLATE_START + #dim_templates + gap_from_start)
+	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
+	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
 
 	for _, group_num in ipairs(gen_groups) do
 		local group_config = BBL.get_group_config(group_num)
@@ -513,15 +438,14 @@ local function build_multiseqs()
 			local multiseq = BBL.getvar(string.format("MULTISEQ_DIM_GROUP_%.0f", group_num))
 			if multiseq == nil then
 				multiseq = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
-				add_to_nukelist(BBL.SEQUENCE, string.format("%.0f", multiseq))
-				setvar_and_mark_for_deletion_on_nuke(string.format("MULTISEQ_DIM_GROUP_%.0f", group_num), string.format("%.0f", multiseq))
+				BBL.setvar(string.format("MULTISEQ_DIM_GROUP_%.0f", group_num), string.format("%.0f", multiseq))
 			end
 
 
 			BBL.cmd("BlindEdit on")
 			for template_num, template in ipairs(dim_templates) do
 				-- Create cue
-				local selective = BBL.getvar(string.format('group_%.0f_dim_%.0f_selective', group_num, template))
+				local selective = BBL.getvar(string.format('GROUP_%.0f_DIM_%.0f_SELECTIVE', group_num, template))
 				BBL.cmd("ClearAll")
 				BBL.cmd(string.format('selfix effect %.0f', selective))  
 				BBL.cmd(string.format('at effect %.0f', selective))
@@ -532,6 +456,7 @@ local function build_multiseqs()
 				local handle = gma.show.getobj.handle(string.format('effect %.0f', template))
 				local exists = gma.show.getobj.verify(handle)
 				if exists == false then 
+					BBL.error(string.format("ERROR in build_multiseq: Effect %.0f does not exist, cannot read name to assign label to cue.", template))
 					error(string.format("ERROR in build_multiseq: Effect %.0f does not exist, cannot read name to assign label to cue.", template))
 				end
 				local template_name = gma.show.getobj.name(handle)
@@ -545,6 +470,7 @@ local function build_multiseqs()
 			local handle = gma.show.getobj.handle(string.format('group %.0f', group_num))
 			local exists = gma.show.getobj.verify(handle)
 			if exists == false then 
+				BBL.error(string.format("ERROR in build_multiseq: Group %.0f does not exist, cannot read name to label multiseq.", group_num))
 				error(string.format("ERROR in build_multiseq: Group %.0f does not exist, cannot read name to label multiseq.", group_num))
 			end
 			local group_name = gma.show.getobj.name(handle)
@@ -596,12 +522,114 @@ local function build_multiseqs()
 end
 
 
+local function build_multiseqs()
+	local success, err = pcall(function()
+
+	local gen_groups 					= BBL.get_gen_groups()
+	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
+	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
+
+	for _, group_num in ipairs(gen_groups) do
+		local group_config = BBL.get_group_config(group_num)
+		-- BBL.print(string.format("Group %s has attribute config: {%s}", group_num, table.concat(group_config.attribute_config, ", ")))
+		
+		-- DIM
+		if BBL.table_has_value(group_config.attribute_config, "1") then
+			-- Check if sequence already exists, if not create a new one.
+			local multiseq = BBL.getvar(string.format("MULTISEQ_DIM_GROUP_%.0f", group_num))
+			if multiseq == nil then
+				multiseq = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
+				BBL.setvar(string.format("MULTISEQ_DIM_GROUP_%.0f", group_num), string.format("%.0f", multiseq))
+			end
+
+
+			BBL.cmd("BlindEdit on")
+			for template_num, template in ipairs(dim_templates) do
+				-- Create cue
+				local selective = BBL.getvar(string.format('group_%.0f_dim_%.0f_selective', group_num, template))
+				BBL.cmd("ClearAll")
+				BBL.cmd(string.format('selfix effect %.0f', selective))  
+				BBL.cmd(string.format('at effect %.0f', selective))
+				BBL.cmd(string.format('store cue %.0f sequence %.0f /o', template_num, multiseq))
+				-- BBL.cmd(string.format('assign sequence %.0f cue %.0f /cmd="%s"', multiseq, template_num, "Some_command"))
+				
+				-- Label cue
+				local handle = gma.show.getobj.handle(string.format('effect %.0f', template))
+				local exists = gma.show.getobj.verify(handle)
+				if exists == false then 
+					BBL.error(string.format("ERROR in build_multiseq: Effect %.0f does not exist, cannot read name to assign label to cue.", template))
+					error(string.format("ERROR in build_multiseq: Effect %.0f does not exist, cannot read name to assign label to cue.", template))
+				end
+				local template_name = gma.show.getobj.name(handle)
+				template_name = BBL.split_string_into_array(template_name, " ")
+				table.remove(template_name, #template_name)
+				BBL.cmd(string.format('label sequence %.0f cue %.0f "%s"', multiseq, template_num, table.concat(template_name, " ")))
+			end	
+			BBL.cmd("BlindEdit off")
+
+			-- Label sequence and apply options
+			local handle = gma.show.getobj.handle(string.format('group %.0f', group_num))
+			local exists = gma.show.getobj.verify(handle)
+			if exists == false then 
+				BBL.error(string.format("ERROR in build_multiseq: Group %.0f does not exist, cannot read name to label multiseq.", group_num))
+				error(string.format("ERROR in build_multiseq: Group %.0f does not exist, cannot read name to label multiseq.", group_num))
+			end
+			local group_name = gma.show.getobj.name(handle)
+			group_name = BBL.split_string_into_array(group_name, " ")
+			table.remove(group_name, #group_name)
+			BBL.cmd(string.format('label sequence %.0f "%s (Dim Multi)"', multiseq, table.concat(group_name, " ")))
+			BBL.cmd(string.format('assign sequence %.0f %s', multiseq, BBL.MULTISEQ_OPTIONS))
+		end
+
+		-- MOV
+		if BBL.table_has_value(group_config.attribute_config, "2") then
+			-- BBL.print(string.format("Group %s has attribute MOV", group_num))
+		elseif BBL.table_has_value(group_config.attribute_config, "3") then
+			-- BBL.print(string.format("Group %s has attribute MOV", group_num))
+		end
+
+		-- COLOR
+		if BBL.table_has_value(group_config.attribute_config, "4") then
+			-- BBL.print(string.format("Group %s has attribute COLOR", group_num))
+		elseif BBL.table_has_value(group_config.attribute_config, "5") then
+			-- BBL.print(string.format("Group %s has attribute COLOR", group_num))
+		end
+
+		-- GOBO
+		if BBL.table_has_value(group_config.attribute_config, "6") then
+			-- BBL.print(string.format("Group %s has attribute GOBO", group_num))
+		end
+
+		-- PRISM
+		if BBL.table_has_value(group_config.attribute_config, "7") then
+			-- BBL.print(string.format("Group %s has attribute PRISM", group_num))
+		end
+
+		-- ZOOM
+		if BBL.table_has_value(group_config.attribute_config, "8") then
+			-- BBL.print(string.format("Group %s has attribute ZOOM", group_num))
+		end
+
+		-- local multiseq = BBL.getvar(string.format("GROUP_%s__MULTISEQ", group))
+		-- if multiseq == nil then
+		-- 	multiseq = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
+		-- end
+	end
+
+	end)
+	if success ~= true then
+		BBL.print(string.format("ERROR in build_multiseqs: %s", err))
+	end
+end
+
+
+
 local function build_pbg()
 	local success, err = pcall(function()
 
 	local gen_groups					= BBL.get_gen_groups()
-	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.TEMPLATE_START)
-	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.TEMPLATE_START + #dim_templates + gap_from_start)
+	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
+	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
 
 	-- Build PBG selection buttons
 	local column_names = {"DIM_A", "DIM_B", "DIM_C", "DIM_D", "DIM_E"}--, "COL_A", "COL_B", "MOV_A", "MOV_B", "POS_A", "POS_B", "PRISM_A", "PRISM_B", "GOBO_A", "GOBO_B"}
@@ -618,6 +646,7 @@ local function build_pbg()
 			-- Check if multiseq already exists, if not, error
 			local dim_multiseq = BBL.getvar(string.format("MULTISEQ_DIM_GROUP_%.0f", group_num))
 			if dim_multiseq == nil then
+				BBL.error(string.format("ERROR in build_pbg: Multisequence for group %.0f dimmer does not exists", group_num))
 				error(string.format("ERROR in build_pbg: Multisequence for group %.0f dimmer does not exists", group_num))
 			end
 
@@ -625,6 +654,7 @@ local function build_pbg()
 			local sequence_handle = gma.show.getobj.handle(string.format("Sequence %.0f", dim_multiseq))
 			local sequence_exists = gma.show.getobj.verify(sequence_handle)
 			if sequence_exists == false then
+				BBL.error(string.format("ERROR in build_pbg: Could not get handle of multisequence for group %.0f ", group_num))
 				error(string.format("ERROR in build_pbg: Could not get handle of multisequence for group %.0f ", group_num))
 			end
 			local sequence_content = BBL.get_sequence_as_hashmap(dim_multiseq)
@@ -637,8 +667,7 @@ local function build_pbg()
 				local pbg_frontend_button_sequence = BBL.getvar(string.format("PBG_G%.0f_%s_FRONTEND_SEQUENCE", group_num, column_name))
 				if pbg_frontend_button_sequence == nil then
 					pbg_frontend_button_sequence = BBL.reserve_next_available_pool_item(BBL.SEQUENCE)
-					add_to_nukelist(BBL.SEQUENCE, string.format('%.0f', pbg_frontend_button_sequence))
-					setvar_and_mark_for_deletion_on_nuke(string.format("PBG_G%.0f_%s_FRONTEND_SEQUENCE", group_num, column_name), string.format('%.0f', pbg_frontend_button_sequence))
+					BBL.setvar(string.format("PBG_G%.0f_%s_FRONTEND_SEQUENCE", group_num, column_name), string.format('%.0f', pbg_frontend_button_sequence))
 				end
 				for cue_number, cue_name in pairs(sequence_content) do
 					BBL.cmd(string.format('store sequence %.0f cue %s /o /nc', pbg_frontend_button_sequence, cue_number))
@@ -661,12 +690,12 @@ local function build_pbg()
 				BBL.cmd(string.format('Assign sequence %.0f exec %s', dim_multiseq, backend_exec))
 				BBL.cmd(string.format('Assign %s exec %s', BBL.PBG_BACKEND_BUTTON_TYPE, backend_exec))
 				BBL.cmd(string.format('Assign exec %s %s', backend_exec, BBL.PBG_BACKEND_BUTTON_OPTIONS))
-				setvar_and_mark_for_deletion_on_nuke(string.format("PBG_G%.0f_%s_BACKEND_EXEC", group_num, column_name), backend_exec)
+				BBL.setvar(string.format("PBG_G%.0f_%s_BACKEND_EXEC", group_num, column_name), backend_exec)
 
 				local cur_active = BBL.getvar(string.format("PBG_G%.0f_%s_ACTIVE", group_num, column_name))
 				if cur_active == nil then
 					cur_active = "1"
-					setvar_and_mark_for_deletion_on_nuke(string.format("PBG_G%.0f_%s_ACTIVE", group_num, column_name), cur_active)
+					BBL.setvar(string.format("PBG_G%.0f_%s_ACTIVE", group_num, column_name), cur_active)
 				end
 
 				BBL.cmd(string.format('go exec %s cue %s', frontend_exec, cur_active))
@@ -716,8 +745,7 @@ local function build_pbg()
 		local go_macro = BBL.getvar(string.format("PBG_%s_GO_MACRO", col_name))
 		if go_macro == nil then
 			go_macro = BBL.reserve_next_available_pool_item(BBL.MACRO)
-			add_to_nukelist(BBL.MACRO, go_macro)
-			setvar_and_mark_for_deletion_on_nuke(string.format("PBG_%s_GO_MACRO", col_name), go_macro)
+			BBL.setvar(string.format("PBG_%s_GO_MACRO", col_name), go_macro)
 			BBL.cmd(string.format('store macro %0.f', go_macro))
 		end
 		
@@ -768,7 +796,7 @@ local function build_pbg()
 
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in build_multiseqs: %s", err))
+		BBL.error(string.format("ERROR in build_multiseqs: %s", err))
 	end
 end
 
@@ -791,7 +819,7 @@ local function build_all()
 	
 	build_subgroups()
 	build_selectives()
-	build_multiseqs()
+	build_pbg_multiseqs()
 	build_pbg()
 
 	-- Make sure to clear both programmers just in case
@@ -814,7 +842,7 @@ local function build_all()
 
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in build_all: %s", err))
+		BBL.error(string.format("ERROR in build_all: %s", err))
 	end
 end
 
@@ -834,7 +862,7 @@ local function nuke_all()
 	-- Go through the nukelist and delete the contents
 	local LEN_NUKELIST = BBL.getvar("LEN_NUKELIST")
 	if LEN_NUKELIST == nil then
-		error("ERROR in nuke_all for getting LEN_NUKELIST")
+		BBL.error("ERROR in nuke_all for getting LEN_NUKELIST")
 	elseif tonumber(LEN_NUKELIST) < 1 then
 		BBL.print("Nukelist is empty, nothing to nuke :)")
 	else
@@ -853,32 +881,20 @@ local function nuke_all()
 				BBL.setvar(string.format("NEXT_AVAILABLE_%s", BBL.MACRO), string.format("%s", deleted_number))
 			elseif deleted_type == BBL.GROUP then
 				BBL.setvar(string.format("NEXT_AVAILABLE_%s", BBL.GROUP), string.format("%s", deleted_number))
+			elseif deleted_type == BBL.EFFECT then
+				BBL.setvar(string.format("NEXT_AVAILABLE_%s", BBL.EFFECT), string.format("%s", deleted_number))
 			elseif deleted_type == BBL.EXEC then
-				-- There is no get_next_available_exec() function (yet), so there is nothing to update here
+				BBL.setvar(string.format("NEXT_AVAILABLE_%s", BBL.EXEC), string.format("%s", deleted_number))
 			else
 				BBL.print(string.format("Requested to delete item of type: %s with number: %d but no logic for handling this type exists.", deleted_type, deleted_number))
 			end
 		end
-	end
-
-	
-	-- Delete selectives
-	local next_available_effect = tonumber(BBL.getvar("NEXT_AVAILABLE_EFFECT"))
-	if next_available_effect ~= BBL.SELECTIVE_START then -- If not empty selectives
-		local selectives = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.SELECTIVE_START)
-		BBL.cmd("ClearAll")
-		for _, selective in ipairs(selectives) do
-			BBL.cmd(string.format('Store effect 1.%.0f.*', selective)) -- This is necessary to also delete effects with a selection that the effect cannot be applied to. Such effect cannot be deleted while having a selection
-			BBL.cmd(string.format("Delete effect %.0f /nc", selective))
-		end
-		BBL.setvar("NEXT_AVAILABLE_EFFECT", BBL.SELECTIVE_START)
-	end
-	
+	end	
 
 	-- Delete variables used for nuking
 	local len_var_nuke = BBL.getvar("LEN_VAR_NUKE")
 	if len_var_nuke == nil then
-		error("ERROR in nuke_all for getting LEN_VAR_NUKE")
+		BBL.error("ERROR in nuke_all for getting LEN_VAR_NUKE")
 	elseif tonumber(len_var_nuke) < 1 then
 		BBL.print("Variable nukelist is empty, nothing to nuke :)")
 	else
@@ -893,8 +909,13 @@ local function nuke_all()
 
 	-- Reset next available remote. This assumes that what is stored in the target exec is 
 	-- nuked successfully by being added to the nukelist seperately from the reserve_next_available_remote method. 
-	BBL.setvar(BBL.NEXT_AVAILABLE_REMOTE, BBL.FIRST_REMOTE)
-	BBL.setvar(BBL.NEXT_AVAILABLE_REMOTE_FLIPPED, BBL.FIRST_REMOTE_FLIPPED)
+	
+	gma.user.setvar(BBL.NEXT_AVAILABLE_GROUP, 			BBL.FIRST_AVAILABLE_GROUP)
+	gma.user.setvar(BBL.NEXT_AVAILABLE_EFFECT, 			BBL.FIRST_SELECTIVE_EFFECT)
+	gma.user.setvar(BBL.NEXT_AVAILABLE_SEQUENCE, 		BBL.FIRST_AVAILABLE_SEQUENCE)
+	gma.user.setvar(BBL.NEXT_AVAILABLE_MACRO, 			BBL.FIRST_AVAILABLE_MACRO)
+	gma.user.setvar(BBL.NEXT_AVAILABLE_REMOTE, 			BBL.FIRST_REMOTE)
+	gma.user.setvar(BBL.NEXT_AVAILABLE_REMOTE_FLIPPED, 	BBL.FIRST_REMOTE_FLIPPED)
 
 	local endTime = os.clock()
 	BBL.print(string.format("Total nuke time: %.3f seconds", endTime - startTime))
@@ -902,7 +923,7 @@ local function nuke_all()
 
 	end)
 	if success ~= true then
-		BBL.print(string.format("ERROR in nuke_all: %s", err))
+		BBL.error(string.format("ERROR in nuke_all: %s", err))
 	else
 		BBL.print("Succesfully nuked file :)")
 	end
@@ -934,7 +955,7 @@ local function main(args_string)
         nuke_all							= nuke_all,
 		build_button 						= build_config_button,
 		build_default_group_config_buttons	= build_config_grid,
-		delete_group_config_variables		= delete_group_config_variables,
+		delete_group_config_variables		= BBL.delete_group_config_variables,
 		build_selectives					= build_selectives,
 		build_multiseqs						= build_multiseqs,
 		build_pbg							= build_pbg,
@@ -943,16 +964,21 @@ local function main(args_string)
 		build_subgroups						= build_subgroups
     }
 
+	
     if case[string.lower(args[1])] then
         case[string.lower(args[1])]()
     else
         BBL.print("unknown action: " .. args[1])
     end
 
-	end)
-	if success ~= true then
-		BBL.print(string.format("ERROR in main: %s", err))
-	end
+end)
+if success ~= true then
+	BBL.error(string.format("ERROR in main: %s", err))
+end
+
+BBL.print_error_log()
+BBL.error_log = {}
+
 end  
 
 

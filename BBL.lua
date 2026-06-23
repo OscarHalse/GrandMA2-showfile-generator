@@ -7,32 +7,56 @@ BBL = BBL or {}
 
 
 -------------------------- DEFINES Start --------------------------
-
-BBL.GROUP_CONFIG_PAGE_START 					= 2
-BBL.ALL_GROUP 									= 1
-BBL.FIRST_GROUP_TO_GENERATE_FROM 				= 2
-BBL.TEMPLATE_START 								= 1001
-BBL.TEMPLATE_MIN_GAP 							= 3
-BBL.MIN_GAP_BETWEEN_TEMPLATES_AND_SELECTIVES	= 20
-BBL.SELECTIVE_START 							= 1040
-BBL.PBG_FIRST_PAGE 								= 10
-BBL.WAIT_TIME_BETWEEN_LOAD_AND_GO           	= 0.1
-BBL.GROUP_L3_MASTER_PAGE						= 10
-
-BBL.GROUP		= "GROUP"
-BBL.EFFECT		= "EFFECT"
-BBL.SEQUENCE	= "SEQUENCE"
-BBL.MACRO		= "MACRO"
-BBL.EXEC		= "EXECUTOR"
-BBL.MACRO		= "MACRO"
-
-BBL.FADER_REMOTE					= "FADER REMOTE"
-BBL.FADER_REMOTE_FLIPPED 			= "FADER REMOTE FLIPPED"
-
-BBL.FIRST_REMOTE					= "100.1"
-BBL.FIRST_REMOTE_FLIPPED			= "101.1"
+BBL.NEXT_AVAILABLE_GROUP			= "NEXT_AVAILABLE_GROUP"
+BBL.NEXT_AVAILABLE_EFFECT			= "NEXT_AVAILABLE_EFFECT"
+BBL.NEXT_AVAILABLE_SEQUENCE			= "NEXT_AVAILABLE_SEQUENCE"
+BBL.NEXT_AVAILABLE_MACRO			= "NEXT_AVAILABLE_MACRO"
 BBL.NEXT_AVAILABLE_REMOTE 			= "NEXT_AVAILABLE_REMOTE"
 BBL.NEXT_AVAILABLE_REMOTE_FLIPPED 	= "NEXT_AVAILABLE_REMOTE_FLIPPED"
+
+BBL.FIRST_AVAILABLE_GROUP 		= 101
+BBL.FIRST_TEMPLATE_EFFECT 		= 1001
+BBL.FIRST_SELECTIVE_EFFECT 		= 1040
+BBL.FIRST_AVAILABLE_SEQUENCE	= 1001
+BBL.FIRST_AVAILABLE_MACRO 		= 1001
+BBL.FIRST_PRESET_DIM 			= 1
+BBL.FIRST_PRESET_COLOR 			= 1
+BBL.FIRST_PRESET_POS 			= 1
+BBL.FIRST_PRESET_GOBO 			= 1001
+BBL.FIRST_PRESET_PRISM 			= 1001
+BBL.FIRST_REMOTE				= "100.1"
+BBL.FIRST_REMOTE_FLIPPED		= "101.1"
+
+
+
+
+BBL.ALL_GROUP 									= 1
+BBL.FIRST_GROUP_TO_GENERATE_FROM 				= 2
+BBL.GROUP_CONFIG_PAGE_START 					= 2
+BBL.TEMPLATE_MIN_GAP 							= 3
+BBL.MIN_GAP_BETWEEN_TEMPLATES_AND_SELECTIVES	= 20
+BBL.PBG_FIRST_PAGE 								= 10
+BBL.GROUP_L3_MASTER_PAGE						= 20
+
+
+
+BBL.GROUP		= "GROUP"
+BBL.SEQUENCE	= "SEQUENCE"
+BBL.EFFECT		= "EFFECT"
+BBL.MACRO		= "MACRO"
+BBL.EXEC		= "EXECUTOR"
+BBL.FADER_REMOTE			= "FADER REMOTE"
+BBL.FADER_REMOTE_FLIPPED 	= "FADER REMOTE FLIPPED"
+
+local RECOGNIZED_POOL_OBJECTS = {
+	BBL.GROUP,
+	BBL.SEQUENCE,
+	BBL.EFFECT,
+	BBL.MACRO,
+	BBL.EXEC
+}
+BBL.RECOGNIZED_POOL_OBJECTS = RECOGNIZED_POOL_OBJECTS
+
 
 BBL.DIM_STOMP_TEMPLATE_EFFECT		= "DIM_STOMP_TEMPLATE_EFFECT"
 
@@ -56,14 +80,22 @@ BBL.CONFIG_GRID_BUTTON_OPTIONS 	= table.concat({"/autostart=off", 	"/autostop=of
 ----------------------------- PLAYBACK GRID --------------------------
 ----------------------------------------------------------------------
 
-BBL.PBG_COLUMNS     = {'DIM', 'COL', 'MOV', 'POS', 'GOBO', 'PRIMS'}
+BBL.ATTRIBUTE_DIM 	= 'DIM'
+BBL.ATTRIBUTE_COL 	= 'COL'
+BBL.ATTRIBUTE_MOV 	= 'MOV'
+BBL.ATTRIBUTE_POS 	= 'POS'
+BBL.ATTRIBUTE_GOBO 	= 'GOBO'
+BBL.ATTRIBUTE_PRISM = 'PRISM'
+
+-- 						 COLUMN TYPE       NUM ENTRIES     	PRESET 	EFFECT
+BBL.PBG_COLUMNS     = {	{BBL.ATTRIBUTE_DIM, 	5,  		true, 	true},
+						{BBL.ATTRIBUTE_COL, 	2,  		true, 	true},
+						{BBL.ATTRIBUTE_MOV, 	2,  		false, 	true},
+						{BBL.ATTRIBUTE_POS, 	2,  		true, 	false},
+						{BBL.ATTRIBUTE_GOBO, 	2,  		true, 	false},
+						{BBL.ATTRIBUTE_PRISM, 	2,  		true, 	false}}
+
 BBL.PBG_NUM_COLUMNS = 15
-BBL.PBG_NUM_DIM		= 5
-BBL.PBG_NUM_COL		= 2
-BBL.PBG_NUM_MOV		= 2
-BBL.PBG_NUM_POS		= 2
-BBL.PBG_NUM_GOBO	= 2
-BBL.PBG_NUM_PRISM	= 2
 
 BBL.PBG_FRONTEND_BUTTON_TYPE 	= "goto"
 BBL.PBG_FRONTEND_SEQ_OPTIONS 	= table.concat({"/cuezero=off", 	"/cuezeroextract=off", "/forcedpos.mode=none", "/releasefirststep=on", 	"/track=off"}, " ")										-- Seq options
@@ -114,15 +146,6 @@ BBL.OFFSET = {
 	CONFIG 						= 25
 }
 
-local RECOGNIZED_POOL_OBJECTS = {
-	BBL.SEQUENCE,
-	BBL.GROUP,
-	BBL.EFFECT,
-	BBL.EXEC,
-	BBL.MACRO
-}
-BBL.RECOGNIZED_POOL_OBJECTS = RECOGNIZED_POOL_OBJECTS
-
 local RIGGING_TYPES = {
 	"Point sources in rows",
 	"Point sources is circle",
@@ -157,51 +180,6 @@ local APPEARANCE = {
 }
 BBL.APPEARANCE = APPEARANCE
 
-local COLOR = {
-	"WHITE",
-	"RED",
-	"GREEN",
-	"BLUE",
-	"DEEP MAGENTA",
-	"LIGHT MAGENTA",
-	"GREEN CYAN",
-	"BLUE CYAN",
-	"YELLOW",
-	"AMBER"
-}
-BBL.COLOR = COLOR
-
-local ZOOM = {
-	"NARROW",
-	"NARROW MED",
-	"MED",
-	"WIDE MED",
-	"WIDE"
-}
-BBL.ZOOM = ZOOM
-
-local GOBO = {
-	"OPEN",
-	"STATIC 1",
-	"STATIC 2",
-	"STATIC 3",
-	"ROTATING 1",
-	"ROTATING 2",
-	"ROTATING 3"
-}
-BBL.GOBO = GOBO
-
-PRISM = {
-	"OPEN",
-	"PRISM"
-}
-
-local DIM_TEMPLATE = {
-
-}
-
-
-
 -------------------------- DEFINES End --------------------------
 
 
@@ -229,6 +207,7 @@ end
 BBL.cmd = safe_cmd
 
 
+
 local function getvar(var)
 	local return_val = nil
 	local success, err = pcall(function() return_val = gma.user.getvar(var) end)
@@ -246,9 +225,13 @@ local function setvar(var, value)
 
 	local split_var = BBL.split_string_into_array(var, " ")
 	if #split_var ~= 1 then
-		error(string.format('ERROR in setvar: Variable names cannot contain spaces. Attempted to set variable "%s". Aborting', var))
+		error(string.format('ERROR in setvar: Variable names cannot contain spaces. Attempted to set variable with name "%s". Aborting', var))
 	end
 
+	local cur_val = BBL.getvar(var)
+	if cur_val == nil then
+		BBL.add_to_var_nukelist(var)
+	end
 	gma.user.setvar(var, value)
 
 	end)
@@ -257,6 +240,83 @@ local function setvar(var, value)
 	end
 end
 BBL.setvar = setvar
+
+BBL.error_log = BBL.error_log or {}
+local function custom_error(err_msg)
+	BBL.print(err_msg)
+	table.insert(BBL.error_log, err_msg)
+	-- error(err_msg)
+end
+BBL.error = custom_error
+
+local function print_error_log()
+	for i = 1, #BBL.error_log do
+		BBL.print(BBL.error_log[i])
+	end
+end
+BBL.print_error_log = print_error_log
+
+
+----------------------------------------------------------------------
+------------------------------ NUKELIST ------------------------------
+----------------------------------------------------------------------
+
+local function add_to_nukelist(item_type, item_number)
+	local success, return_val = pcall(function()
+	
+		if BBL.is_recognized_pool_object(item_type) == false then
+			error("Attempted to add unrecognized item type: " .. item_type .. " with number: " .. item_number .. " to nukelist. Aborting.")
+			return
+		end
+
+		local len_nukelist = BBL.getvar("LEN_NUKELIST")
+		if type(item_number) == "string" then
+			BBL.setvar(string.format("NUKELIST_%d", len_nukelist + 1), string.format("%s %s", item_type, item_number))
+		elseif type(item_number) == "number" then
+			BBL.setvar(string.format("NUKELIST_%d", len_nukelist + 1), string.format("%s %.0f", item_type, item_number))
+		else
+			return "Item number was of an urecognised type"
+		end
+		BBL.setvar("LEN_NUKELIST", string.format("%d", len_nukelist + 1))
+
+
+	end)
+	if success ~= true then
+		BBL.print(string.format("ERROR in add_to_nukelist: %s", return_val))
+	end
+end
+BBL.add_to_nukelist = add_to_nukelist
+
+
+local function add_to_var_nukelist(variable_name)
+	local cur_len = tonumber(BBL.getvar("LEN_VAR_NUKE"))
+	local new_len = cur_len + 1
+	
+	if cur_len == nil then
+		BBL.print("ERROR in add_to_var_nukelist. Aborting")
+		return
+	end
+
+	gma.user.setvar(string.format('VAR_NUKE_%d', new_len), variable_name)
+	gma.user.setvar(string.format('LEN_VAR_NUKE'), tostring(new_len))
+end
+BBL.add_to_var_nukelist = add_to_var_nukelist
+
+
+local function delete_group_config_variables()
+	local success, return_val = pcall(function()
+
+	local groups = BBL.get_gen_groups()
+	for _, group in ipairs(groups) do
+		BBL.cmd(string.format('setuservar GROUP_%.0f_CONFIG = \"\"', group))
+	end
+
+	end)
+	if success ~= true then
+		BBL.print(string.format("ERROR in get_group_config: %s", return_val))
+	end
+end
+BBL.delete_group_config_variables = delete_group_config_variables
 
 ---------------------------------------------------------------------
 ----------------------------- ARRAY/HASHMAP -------------------------
@@ -486,6 +546,7 @@ local function reserve_next_available_pool_item(type)
 	end
 
 	BBL.setvar(string.format("NEXT_AVAILABLE_%s", type), string.format("%.0f", next_item + 1))
+	BBL.add_to_nukelist(type, next_item)
 	return next_item
 
 	end)
@@ -623,7 +684,7 @@ BBL.get_group_config = get_group_config
 
 local function store_group_config(group_config)
 	local config_string = BBL.config_table_to_string(group_config)
-	BBL.setvar(string.format("GROUP_%d_CONFIG", group_config.group_number), config_string)
+	gma.user.setvar(string.format("GROUP_%d_CONFIG", group_config.group_number), config_string)
 end
 BBL.store_group_config = store_group_config
 
