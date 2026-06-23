@@ -36,12 +36,39 @@ BBL.NEXT_AVAILABLE_REMOTE_FLIPPED 	= "NEXT_AVAILABLE_REMOTE_FLIPPED"
 
 BBL.DIM_STOMP_TEMPLATE_EFFECT		= "DIM_STOMP_TEMPLATE_EFFECT"
 
+BBL.ALPHBABET 						= {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
 
+
+
+
+BBL.CONFIG_GRID_BUTTON_TYPE 	= "goto"
+BBL.CONFIG_GRID_SEQ_OPTIONS 	= table.concat({"/cuezero=off", 	"/cuezeroextract=off", "/forcedpos.mode=none", "/releasefirststep=on", 	"/track=off"}, " ")										-- Seq options
+BBL.CONFIG_GRID_BUTTON_OPTIONS 	= table.concat({"/autostart=off", 	"/autostop=off", 		"/offtime=0", 			"/autofix=off", 		"/mastergo=off", 											-- Start
+												"/priority=normal",	"/softltp=off", 		"/playbackmaster=0", 	"/wrap=on", 			"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
+												"/crossfade=off", 																																-- x-fade
+												"/autostop=off", 																																-- Tracking
+												"/speed=Normal", 	"/speedmaster=speed_individual", 			"/ratemaster=rate_individual", 			"/effectspeed=off",						-- Speed
+												"/swopprotect=on", 	"/killprotect=on", 							"/ignoreexectime=on", 					"/ooo=off", 							-- Protect
+												"/mibalways=off", 	"/mibnever=off", 							"/prepos=off", 																	-- MIB
+												"/chaser=off", 		"/width=1"}, " ")	
+
+----------------------------------------------------------------------
+----------------------------- PLAYBACK GRID --------------------------
+----------------------------------------------------------------------
+
+BBL.PBG_COLUMNS     = {'DIM', 'COL', 'MOV', 'POS', 'GOBO', 'PRIMS'}
+BBL.PBG_NUM_COLUMNS = 15
+BBL.PBG_NUM_DIM		= 5
+BBL.PBG_NUM_COL		= 2
+BBL.PBG_NUM_MOV		= 2
+BBL.PBG_NUM_POS		= 2
+BBL.PBG_NUM_GOBO	= 2
+BBL.PBG_NUM_PRISM	= 2
 
 BBL.PBG_FRONTEND_BUTTON_TYPE 	= "goto"
-BBL.PBG_FRONTEND_SEQ_OPTIONS 	= table.concat({"/cuezero=off", "/cuezeroextract=off", "/forcedpos.mode=none", "/releasefirststep=on", "/track=off"}, " ")										-- Seq options
-BBL.PBG_FRONTEND_BUTTON_OPTIONS = table.concat({"/autostart=on", 	"/autostop=off", 	"/offtime=0", 			"/autofix=off", 	"/mastergo=off", 											-- Start
-												"/priority=ltp", 	"/softltp=off", 	"/playbackmaster=0", 	"/wrap=on", 		"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
+BBL.PBG_FRONTEND_SEQ_OPTIONS 	= table.concat({"/cuezero=off", 	"/cuezeroextract=off", "/forcedpos.mode=none", "/releasefirststep=on", 	"/track=off"}, " ")										-- Seq options
+BBL.PBG_FRONTEND_BUTTON_OPTIONS = table.concat({"/autostart=on", 	"/autostop=off", 		"/offtime=0", 			"/autofix=off", 		"/mastergo=off", 											-- Start
+												"/priority=normal",	"/softltp=off", 		"/playbackmaster=0", 	"/wrap=on", 			"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
 												"/crossfade=off", 																																-- x-fade
 												"/autostop=off", 																																-- Tracking
 												"/speed=Normal", 	"/speedmaster=speed_individual", 			"/ratemaster=rate_individual", 			"/effectspeed=off",						-- Speed
@@ -51,20 +78,24 @@ BBL.PBG_FRONTEND_BUTTON_OPTIONS = table.concat({"/autostart=on", 	"/autostop=off
 										
 BBL.PBG_BACKEND_BUTTON_TYPE 	= "go"
 BBL.MULTISEQ_OPTIONS 			= table.concat({"/cuezero=off", 	"/cuezeroextract=off", 	"/forcedpos.mode=none", "/releasefirststep=on", "/track=off"}, " ")									-- Seq options. Remember that the multiseq is also the PBG backend seq
-BBL.PBG_BACKEND_BUTTON_OPTIONS 	= table.concat({"/autostart=on", 	"/autostop=off", 	"/offtime=0", 			"/autofix=off", 	"/mastergo=off", 											-- Start
-												"/priority=ltp", 	"/softltp=off", 	"/playbackmaster=0", 	"/wrap=on", 		"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
+BBL.PBG_BACKEND_BUTTON_OPTIONS 	= table.concat({"/autostart=on", 	"/autostop=off", 		"/offtime=0", 			"/autofix=off", 		"/mastergo=off", 											-- Start
+												"/priority=normal",	"/softltp=off", 		"/playbackmaster=0", 	"/wrap=on", 			"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
 												"/crossfade=off",																																-- x-fade
 												"/autostop=off", 																																-- Tracking
 												"/speed=Normal", 	"/speedmaster=speed_individual", 			"/ratemaster=rate_individual", 			"/effectspeed=off", 					-- Speed
-												"/swopprotect=off", "/killprotect=off", 						"/ignoreexectime=off", 					"/ooo=off", 							-- Protect
+												"/swopprotect=off", "/killprotect=off", 						"/ignoreexectime=off", 					"/ooo=on", 							-- Protect
 												"/mibalways=off", 	"/mibnever=off", 							"/prepos=off", 																	-- MIB
 												"/chaser=off", 		"/width=1"}, " ")																											-- Function
+
+----------------------------------------------------------------------
+------------------------------- SUBGROUPS ----------------------------
+----------------------------------------------------------------------
 
 BBL.GROUP_MASTER_STOMP_EXEC_BUTTON_TYPE = "empty"
 BBL.GROUP_MASTER_STOMP_EXEC_FADER_TYPE 	= "TempFader"
 BBL.GROUP_MASTER_STOMP_SEQ_OPTION 		= table.concat({"/cuezero=off", 	"/cuezeroextract=off", 	"/forcedpos.mode=none", "/releasefirststep=on", "/track=off"}, " ")									-- Seq options. 
-BBL.GROUP_MASTER_STOMP_EXEC_OPTION 		= table.concat({"/autostart=on", 	"/autostop=off", 	"/offtime=0", 			"/autofix=off", 	"/mastergo=off", 											-- Start
-														"/priority=ltp", 	"/softltp=off", 	"/playbackmaster=0", 	"/wrap=on", 		"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
+BBL.GROUP_MASTER_STOMP_EXEC_OPTION 		= table.concat({"/autostart=on", 	"/autostop=off", 		"/offtime=0", 			"/autofix=off", 		"/mastergo=off", 											-- Start
+														"/priority=ltp", 	"/softltp=off", 		"/playbackmaster=0", 	"/wrap=on", 			"/restart=current", "/triggerisgo=off", "/cmddisable=off",	-- Playback
 														"/crossfade=off",																																-- x-fade
 														"/autostop=off", 																																-- Tracking
 														"/speed=Normal", 	"/speedmaster=speed_individual", 			"/ratemaster=rate_individual", 			"/effectspeed=off", 					-- Speed

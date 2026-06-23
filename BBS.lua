@@ -91,7 +91,7 @@ end
 
 -- Creates a sequence with the labels and commands given in the nesten list goto_options_and_cmds, 
 -- assigns that sequence to the executor "exec" with the given name and color.
-local function build_button(name, exec, color, goto_options_and_cmds)
+local function build_config_button(name, exec, color, goto_options_and_cmds)
 	local success, return_val = pcall(function()
 	
 	local exec_handle = gma.show.getobj.handle(string.format("Executor %s", exec)) 
@@ -107,13 +107,14 @@ local function build_button(name, exec, color, goto_options_and_cmds)
 			cmd = string.gsub(cmd, "'", "\'") 
 			BBL.cmd(string.format('Store Sequence %d cue %d', seq_num, cue))
 			BBL.cmd(string.format('Label Sequence %d cue %d "%s"', seq_num, cue, cue_text))
-			BBL.cmd(string.format('Assign Sequence %d cue %d /cmd=\"%s\" /nc', seq_num, cue, cmd))
+			BBL.cmd(string.format('Assign Sequence %d cue %d /cmd=\"%s\" %s /nc', seq_num, cue, cmd, BBL.CONFIG_GRID_SEQ_OPTIONS))
 			cue = cue + 1
 		end
 		BBL.cmd(string.format('BlindEdit OFF'))
 		BBL.cmd(string.format('Label Sequence %d "%s"', seq_num, name))
 		BBL.cmd(string.format('Assign Sequence %d ExecButton1 %s', seq_num, exec))
-		BBL.cmd(string.format('Assign Exec %s /IgnoreExecTime=1', exec))
+		BBL.cmd(string.format('Assign Exec %s %s', exec, BBL.CONFIG_GRID_BUTTON_OPTIONS))
+		BBL.cmd(string.format('Assign %s Exec %s', BBL.CONFIG_GRID_BUTTON_TYPE, exec))
 		BBL.cmd(string.format('Appearance Sequence %d %s', seq_num, color))
 	
 		return seq_num
@@ -128,7 +129,7 @@ local function build_button(name, exec, color, goto_options_and_cmds)
 	return return_val
 end
 
-local function build_default_group_config_buttons()
+local function build_config_grid()
 	local success, error = pcall(function()
 
 	local groups = BBL.get_gen_groups()
@@ -141,13 +142,13 @@ local function build_default_group_config_buttons()
 			{"Yet", ""},
 			{"Implemented", ""},
 		}
-		build_button("Template", string.format("%d.%d", page, col), BBL.APPEARANCE.YELLOW, template_options_and_cmds)
+		build_config_button("Template", string.format("%d.%d", page, col), BBL.APPEARANCE.YELLOW, template_options_and_cmds)
 
 		-- Given configuations
 		local given_configurations_options_and_cmds = {
 			{"Empty", string.format("off exec %d.%d", page, col + BBL.OFFSET.APPLIED_RIGGING_CONFIGS)},
 		}
-		build_button("Riggs", string.format("%d.%d", page, col + 5), BBL.APPEARANCE.YELLOW, given_configurations_options_and_cmds)
+		build_config_button("Riggs", string.format("%d.%d", page, col + 5), BBL.APPEARANCE.YELLOW, given_configurations_options_and_cmds)
 
 		-- Available configurations
 		local available_configurations_options_and_cmds = {}
@@ -156,13 +157,13 @@ local function build_default_group_config_buttons()
 			local cmd = string.format("plugin 2 add_to_group_config,%d,rigging,%s", group_num, type_index)
 			table.insert(available_configurations_options_and_cmds, {option_name, cmd})
 		end
-		build_button("Add Rigg", string.format("%d.%d", page, col + 10), BBL.APPEARANCE.YELLOW, available_configurations_options_and_cmds)
+		build_config_button("Add Rigg", string.format("%d.%d", page, col + 10), BBL.APPEARANCE.YELLOW, available_configurations_options_and_cmds)
 
 		 -- Given attributes
 		 local given_attributes_options_and_cmds = {
 			{"Empty", string.format("off exec %d.%d", page, col + BBL.OFFSET.APPLIED_ATTRIBUTE_CONFIGS)},
 		}
-		build_button("Attr", string.format("%d.%d", page, col + 15), BBL.APPEARANCE.YELLOW, given_attributes_options_and_cmds)
+		build_config_button("Attr", string.format("%d.%d", page, col + 15), BBL.APPEARANCE.YELLOW, given_attributes_options_and_cmds)
 
 		-- Available attributes
 		local available_attributes_options_and_cmds = {}
@@ -171,7 +172,7 @@ local function build_default_group_config_buttons()
 			local cmd = string.format("plugin 2 add_to_group_config,%d,attribute,%s", group_num, type_index)
 			table.insert(available_attributes_options_and_cmds, {option_name, cmd})
 		end
-		build_button("Add Attr", string.format("%d.%d", page, col + 20), BBL.APPEARANCE.YELLOW, available_attributes_options_and_cmds)
+		build_config_button("Add Attr", string.format("%d.%d", page, col + 20), BBL.APPEARANCE.YELLOW, available_attributes_options_and_cmds)
 	
 		-- Configure
 		local configure_options_and_cmds = {
@@ -179,7 +180,7 @@ local function build_default_group_config_buttons()
 			{"Set short name (TBI)", ""},
 			{"Set color (TBI)", ""},
 		}
-		build_button("Config", string.format("%d.%d", page, col + 25), BBL.APPEARANCE.YELLOW, configure_options_and_cmds)
+		build_config_button("Config", string.format("%d.%d", page, col + 25), BBL.APPEARANCE.YELLOW, configure_options_and_cmds)
 	end	
 
 	end)
@@ -517,6 +518,7 @@ local function build_multiseqs()
 			end
 
 
+			BBL.cmd("BlindEdit on")
 			for template_num, template in ipairs(dim_templates) do
 				-- Create cue
 				local selective = BBL.getvar(string.format('group_%.0f_dim_%.0f_selective', group_num, template))
@@ -537,6 +539,7 @@ local function build_multiseqs()
 				table.remove(template_name, #template_name)
 				BBL.cmd(string.format('label sequence %.0f cue %.0f "%s"', multiseq, template_num, table.concat(template_name, " ")))
 			end	
+			BBL.cmd("BlindEdit off")
 
 			-- Label sequence and apply options
 			local handle = gma.show.getobj.handle(string.format('group %.0f', group_num))
@@ -777,7 +780,7 @@ local function build_all()
 	init = true
 
 
-	build_default_group_config_buttons()
+	build_config_grid()
 	local gen_groups = BBL.get_gen_groups()
 	local group_config = {}
 	for _, group_num in ipairs(gen_groups) do
@@ -791,6 +794,7 @@ local function build_all()
 	build_multiseqs()
 	build_pbg()
 
+	-- Make sure to clear both programmers just in case
 	BBL.cmd("BlindEdit on")
 	BBL.cmd("ClearAll")
 	BBL.cmd("BlindEdit off")
@@ -928,8 +932,8 @@ local function main(args_string)
     local case = {
 		build_all 							= build_all,
         nuke_all							= nuke_all,
-		build_button 						= build_button,
-		build_default_group_config_buttons	= build_default_group_config_buttons,
+		build_button 						= build_config_button,
+		build_default_group_config_buttons	= build_config_grid,
 		delete_group_config_variables		= delete_group_config_variables,
 		build_selectives					= build_selectives,
 		build_multiseqs						= build_multiseqs,
