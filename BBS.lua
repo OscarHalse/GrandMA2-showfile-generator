@@ -565,7 +565,7 @@ end
 
 
 local function build_multiseqs()
-	local success, err = pcall(function()
+	local err = pcall(function()
 
 	local gen_groups 			= BBL.get_gen_groups()
 	local dim_templates			= BBL.get_effect_templates(BBL.ATTRIBUTE_DIM)
@@ -590,9 +590,9 @@ local function build_multiseqs()
 			BBL.cmd("BlindEdit on")
 			for template_num, template in ipairs(dim_templates) do
 				-- Create cue
-				local selective = BBL.getvar(string.format('group_%.0f_dim_%.0f_selective', group_num, template))
+				local selective = BBL.getvar(string.format('GROUP_%.0f_DIM_%.0f_SELECTIVE', group_num, template))
 				BBL.cmd("ClearAll")
-				BBL.cmd(string.format('selfix effect %.0f', selective))  
+				BBL.cmd(string.format('selfix effect %.0f', selective))
 				BBL.cmd(string.format('at effect %.0f', selective))
 				BBL.cmd(string.format('store cue %.0f sequence %.0f /o', template_num, multiseq))
 				-- BBL.cmd(string.format('assign sequence %.0f cue %.0f /cmd="%s"', multiseq, template_num, "Some_command"))
@@ -609,7 +609,13 @@ local function build_multiseqs()
 				table.remove(template_name, #template_name)
 				BBL.cmd(string.format('label sequence %.0f cue %.0f "%s"', multiseq, template_num, table.concat(template_name, " ")))
 			end	
-			BBL.cmd(string.format('delete cue %.0f thru sequence %.0f /o', #dim_templates + 1, multiseq))
+
+			local cue_after_last_created_handle = gma.show.getobj.handle(string.format('sequence %.0f cue %.0f', multiseq, #dim_templates + 1))
+			local cue_after_last_created_exists = gma.show.getobj.verify(cue_after_last_created_handle)
+			if cue_after_last_created_exists == true then
+				BBL.cmd(string.format('delete cue %.0f thru sequence %.0f /nc', #dim_templates + 1, multiseq))
+			end
+
 			BBL.cmd("BlindEdit off")
 
 			-- Label sequence and apply options
