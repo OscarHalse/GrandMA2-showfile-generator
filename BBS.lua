@@ -98,7 +98,7 @@ local function build_config_grid()
 
 		-- Available attributes
 		local available_attributes_options_and_cmds = {}
-		for type_index, type in ipairs(BBL.ATTRIBUTE_TYPES) do
+		for type_index, type in ipairs(BBL.CONFIG_ATTRIBUTE_TYPES) do
 			local option_name = type ..  " (TBI)"
 			local cmd = string.format("plugin 2 add_to_group_config,%d,attribute,%s", group_num, type_index)
 			table.insert(available_attributes_options_and_cmds, {option_name, cmd})
@@ -327,22 +327,21 @@ local function build_selectives()
 	local success, err = pcall(function()
 
 	-- BBL.print("build_selectives called")
-	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
-	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
-	local groups 						= BBL.get_gen_groups()
+	local gen_groups 			= BBL.get_gen_groups()
+	local dim_templates			= BBL.get_effect_templates(BBL.ATTRIBUTE_DIM)
+	local mov_templates 		= BBL.get_effect_templates(BBL.ATTRIBUTE_MOV)
+	local tilt_templates 		= BBL.get_effect_templates(BBL.ATTRIBUTE_TILT)
+	local colormix_templates 	= BBL.get_effect_templates(BBL.ATTRIBUTE_COLORMIX)
 
-	-- BBL.print(string.format("Dimmer templates = {%s} with gap from start = %s", table.concat(dim_templates, ", "), gap_from_start))
-	-- BBL.print(string.format("Mov templates = {%s} with gap from dim = %s", table.concat(mov_templates, ", "), gap_from_dim))
-	-- BBL.print(string.format("Gen_groups = {%s}", table.concat(groups, ", ")))
+
 
 	BBL.cmd("BlindEdit on")
-	for _, group_num in ipairs(groups) do
-		local group_config = BBL.get_group_config(group_num)
-		local has_dimmer = BBL.table_has_value(group_config.attribute_config, "1")
-		local has_mov    = BBL.table_has_value(group_config.attribute_config, "2")
-
-		-- WARMING THERE IS A POTENTIAL BUG HERE, IF THE USER ACCIDENTALLY CONFIGURS A FICTURE TO HAVE MOV
-		-- THEN IT WILL NOT BE ABLE TO BE NUKED (might be fixed in new nuke, not verified)
+	for _, group_num in ipairs(gen_groups) do
+		local group_config 		= BBL.get_group_config(group_num)
+		local has_dimmer 		= BBL.table_has_value(group_config.attribute_config, "1")
+		local has_mov    		= BBL.table_has_value(group_config.attribute_config, "2")
+		local has_tilt    		= BBL.table_has_value(group_config.attribute_config, "3")
+		local has_colormix    	= BBL.table_has_value(group_config.attribute_config, "4")
 		
 		if has_dimmer == true then
 			for _, template in ipairs(dim_templates) do
@@ -411,6 +410,40 @@ local function build_selectives()
 			end
 		end
 
+		if has_tilt == true then
+			for _, template in ipairs(tilt_templates) do
+				local selective = BBL.getvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_TILT, template))
+				if selective == nil then
+					selective = BBL.reserve_next_available_pool_item(BBL.EFFECT)
+					BBL.setvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_TILT, template), selective)
+				end
+				
+				BBL.cmd("ClearAll")
+				BBL.cmd(string.format('copy effect %.0f at %.0f /nc', template, selective))
+				BBL.cmd(string.format('group %.0f', group_num))
+				BBL.cmd(string.format('store effect 1.%.0f.* /nc', selective))
+				BBL.cmd(string.format('Effect 1.%.0f Property "Selective" "Yes"', selective))
+				BBL.cmd(string.format('label effect %.0f "G%.0f T_%.0f"', selective, group_num, template))				
+			end
+		end
+
+		if has_colormix == true then
+			for _, template in ipairs(colormix_templates) do
+				local selective = BBL.getvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_COLORMIX, template))
+				if selective == nil then
+					selective = BBL.reserve_next_available_pool_item(BBL.EFFECT)
+					BBL.setvar(string.format('GROUP_%.0f_%s_%.0f_SELECTIVE', group_num, BBL.ATTRIBUTE_COLORMIX, template), selective)
+				end
+				
+				BBL.cmd("ClearAll")
+				BBL.cmd(string.format('copy effect %.0f at %.0f /nc', template, selective))
+				BBL.cmd(string.format('group %.0f', group_num))
+				BBL.cmd(string.format('store effect 1.%.0f.* /nc', selective))
+				BBL.cmd(string.format('Effect 1.%.0f Property "Selective" "Yes"', selective))
+				BBL.cmd(string.format('label effect %.0f "G%.0f C_%.0f"', selective, group_num, template))				
+			end
+		end
+
 	end
 	BBL.cmd("BlindEdit off")
 	
@@ -424,9 +457,11 @@ end
 local function build_pbg_multiseqs()
 	local success, err = pcall(function()
 
-	local gen_groups 					= BBL.get_gen_groups()
-	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
-	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
+	local gen_groups 			= BBL.get_gen_groups()
+	local dim_templates			= BBL.get_effect_templates(BBL.ATTRIBUTE_DIM)
+	local mov_templates 		= BBL.get_effect_templates(BBL.ATTRIBUTE_MOV)
+	local tilt_templates 		= BBL.get_effect_templates(BBL.ATTRIBUTE_TILT)
+	local colormix_templates 	= BBL.get_effect_templates(BBL.ATTRIBUTE_COLORMIX)
 
 	for _, group_num in ipairs(gen_groups) do
 		local group_config = BBL.get_group_config(group_num)
@@ -464,6 +499,7 @@ local function build_pbg_multiseqs()
 				table.remove(template_name, #template_name)
 				BBL.cmd(string.format('label sequence %.0f cue %.0f "%s"', multiseq, template_num, table.concat(template_name, " ")))
 			end	
+			BBL.cmd(string.format('delete cue %.0f thru sequence %.0f /o', #dim_templates + 1, multiseq))
 			BBL.cmd("BlindEdit off")
 
 			-- Label sequence and apply options
@@ -525,9 +561,11 @@ end
 local function build_multiseqs()
 	local success, err = pcall(function()
 
-	local gen_groups 					= BBL.get_gen_groups()
-	local dim_templates, gap_from_start = BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
-	local mov_templates, gap_from_dim 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT + #dim_templates + gap_from_start)
+	local gen_groups 			= BBL.get_gen_groups()
+	local dim_templates			= BBL.get_effect_templates(BBL.ATTRIBUTE_DIM)
+	local mov_templates 		= BBL.get_effect_templates(BBL.ATTRIBUTE_MOV)
+	local tilt_templates 		= BBL.get_effect_templates(BBL.ATTRIBUTE_TILT)
+	local colormix_templates 	= BBL.get_effect_templates(BBL.ATTRIBUTE_COLORMIX)
 
 	for _, group_num in ipairs(gen_groups) do
 		local group_config = BBL.get_group_config(group_num)
@@ -565,6 +603,7 @@ local function build_multiseqs()
 				table.remove(template_name, #template_name)
 				BBL.cmd(string.format('label sequence %.0f cue %.0f "%s"', multiseq, template_num, table.concat(template_name, " ")))
 			end	
+			BBL.cmd(string.format('delete cue %.0f thru sequence %.0f /o', #dim_templates + 1, multiseq))
 			BBL.cmd("BlindEdit off")
 
 			-- Label sequence and apply options
@@ -673,9 +712,10 @@ local function build_pbg()
 					BBL.cmd(string.format('store sequence %.0f cue %s /o /nc', pbg_frontend_button_sequence, cue_number))
 					BBL.cmd(string.format('label sequence %.0f cue %s "%s"', pbg_frontend_button_sequence, cue_number, cue_name))
 					BBL.cmd(string.format('assign sequence %.0f cue %s /cmd="%s"', 
-											pbg_frontend_button_sequence, cue_number, string.format('setuservar PBG_G%.0f_%s_ACTIVE %0.f', 
-											group_num, column_name, cue_number)))
+					pbg_frontend_button_sequence, cue_number, string.format('setuservar PBG_G%.0f_%s_ACTIVE %0.f', 
+					group_num, column_name, cue_number)))
 				end
+				BBL.cmd(string.format('delete sequence %.0f cue %.0f thru /nc', pbg_frontend_button_sequence, BBL.get_hashmap_size(sequence_content) + 1))
 				local frontend_exec = string.format('%.0f.%.0f', BBL.PBG_FIRST_PAGE, row_offset + col_num - 1)
 				BBL.cmd(string.format('assign sequence %.0f exec %s', pbg_frontend_button_sequence, frontend_exec))
 				

@@ -16,7 +16,7 @@ BBL.NEXT_AVAILABLE_REMOTE_FLIPPED 	= "NEXT_AVAILABLE_REMOTE_FLIPPED"
 
 BBL.FIRST_AVAILABLE_GROUP 		= 101
 BBL.FIRST_TEMPLATE_EFFECT 		= 1001
-BBL.FIRST_SELECTIVE_EFFECT 		= 1040
+BBL.FIRST_SELECTIVE_EFFECT 		= 1104
 BBL.FIRST_AVAILABLE_SEQUENCE	= 1001
 BBL.FIRST_AVAILABLE_MACRO 		= 1001
 BBL.FIRST_PRESET_DIM 			= 1
@@ -40,11 +40,11 @@ BBL.GROUP_L3_MASTER_PAGE						= 20
 
 
 
-BBL.GROUP		= "GROUP"
-BBL.SEQUENCE	= "SEQUENCE"
-BBL.EFFECT		= "EFFECT"
-BBL.MACRO		= "MACRO"
-BBL.EXEC		= "EXECUTOR"
+BBL.GROUP					= "GROUP"
+BBL.SEQUENCE				= "SEQUENCE"
+BBL.EFFECT					= "EFFECT"
+BBL.MACRO					= "MACRO"
+BBL.EXEC					= "EXECUTOR"
 BBL.FADER_REMOTE			= "FADER REMOTE"
 BBL.FADER_REMOTE_FLIPPED 	= "FADER REMOTE FLIPPED"
 
@@ -60,7 +60,7 @@ BBL.RECOGNIZED_POOL_OBJECTS = RECOGNIZED_POOL_OBJECTS
 
 BBL.DIM_STOMP_TEMPLATE_EFFECT		= "DIM_STOMP_TEMPLATE_EFFECT"
 
-BBL.ALPHBABET 						= {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
+BBL.ALPHBABET_ARRAY					= {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
 
 
 
@@ -80,16 +80,18 @@ BBL.CONFIG_GRID_BUTTON_OPTIONS 	= table.concat({"/autostart=off", 	"/autostop=of
 ----------------------------- PLAYBACK GRID --------------------------
 ----------------------------------------------------------------------
 
-BBL.ATTRIBUTE_DIM 	= 'DIM'
-BBL.ATTRIBUTE_COL 	= 'COL'
-BBL.ATTRIBUTE_MOV 	= 'MOV'
-BBL.ATTRIBUTE_POS 	= 'POS'
-BBL.ATTRIBUTE_GOBO 	= 'GOBO'
-BBL.ATTRIBUTE_PRISM = 'PRISM'
+BBL.ATTRIBUTE_DIM 		= 'DIM'
+BBL.ATTRIBUTE_COLOR 	= 'COLOR'
+BBL.ATTRIBUTE_COLORMIX 	= 'COLORMIX'
+BBL.ATTRIBUTE_MOV 		= 'MOV'
+BBL.ATTRIBUTE_TILT 		= 'TILT'
+BBL.ATTRIBUTE_POS 		= 'POS'
+BBL.ATTRIBUTE_GOBO 		= 'GOBO'
+BBL.ATTRIBUTE_PRISM 	= 'PRISM'
 
 -- 						 COLUMN TYPE       NUM ENTRIES     	PRESET 	EFFECT
 BBL.PBG_COLUMNS     = {	{BBL.ATTRIBUTE_DIM, 	5,  		true, 	true},
-						{BBL.ATTRIBUTE_COL, 	2,  		true, 	true},
+						{BBL.ATTRIBUTE_COLOR, 	2,  		true, 	true},
 						{BBL.ATTRIBUTE_MOV, 	2,  		false, 	true},
 						{BBL.ATTRIBUTE_POS, 	2,  		true, 	false},
 						{BBL.ATTRIBUTE_GOBO, 	2,  		true, 	false},
@@ -157,7 +159,7 @@ local RIGGING_TYPES = {
 }
 BBL.RIGGING_TYPES = RIGGING_TYPES
 
-local ATTRIBUTE_TYPES = {
+local CONFIG_ATTRIBUTE_TYPES = {
 	"Dim",
 	"Pan/Tilt",
 	"Tilt only",
@@ -167,7 +169,7 @@ local ATTRIBUTE_TYPES = {
 	"Prism",
 	"Zoom"
 }
-BBL.ATTRIBUTE_TYPES = ATTRIBUTE_TYPES
+BBL.CONFIG_ATTRIBUTE_TYPES = CONFIG_ATTRIBUTE_TYPES
 
 local APPEARANCE = {
 	RED 	= '/r=100 /g=0   /b=0',
@@ -241,6 +243,7 @@ local function setvar(var, value)
 end
 BBL.setvar = setvar
 
+
 BBL.error_log = BBL.error_log or {}
 local function custom_error(err_msg)
 	BBL.print(err_msg)
@@ -248,6 +251,7 @@ local function custom_error(err_msg)
 	-- error(err_msg)
 end
 BBL.error = custom_error
+
 
 local function print_error_log()
 	for i = 1, #BBL.error_log do
@@ -439,6 +443,14 @@ local function count_num_unique_entries(table_to_count)
 end
 BBL.count_num_unique_entries = count_num_unique_entries
 
+local function get_hashmap_size(t)
+    local count = 0
+    for _ in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+BBL.get_hashmap_size = get_hashmap_size
 
 
 ------------------------------------------------------------------------------------------------
@@ -644,6 +656,28 @@ local function get_sequence_as_hashmap(sequence_number)
 end
 BBL.get_sequence_as_hashmap = get_sequence_as_hashmap
 
+local function get_effect_templates(effect_type)
+	local dim_templates, gap_from_start 	= BBL.get_contigous_pool_items(BBL.EFFECT, BBL.FIRST_TEMPLATE_EFFECT)
+	local mov_templates, gap_from_dim 		= BBL.get_contigous_pool_items(BBL.EFFECT, dim_templates[#dim_templates] + 1)
+	local tilt_templates, gap_from_dim 		= BBL.get_contigous_pool_items(BBL.EFFECT, mov_templates[#mov_templates] + 1)
+	local colormix_templates, gap_from_mov	= BBL.get_contigous_pool_items(BBL.EFFECT, tilt_templates[#tilt_templates] + 1)
+
+	if effect_type == BBL.ATTRIBUTE_DIM then
+		return dim_templates
+	elseif effect_type == BBL.ATTRIBUTE_MOV then
+		return mov_templates
+	elseif effect_type == BBL.ATTRIBUTE_TILT then
+		return tilt_templates
+	elseif effect_type == BBL.ATTRIBUTE_COLORMIX then
+		return colormix_templates	
+	else
+		BBL.error(string.format("ERROR in get_effect_templates: Unrecognized effect type %s. Returning nil.", effect_type))
+		return nil
+	end
+
+end
+BBL.get_effect_templates = get_effect_templates
+
 
 
 
@@ -763,7 +797,7 @@ local function add_to_group_config(group_num, type, config_num)
 	elseif type == "attribute" then
 		table.insert(config.attribute_config, config_num)
 		num_types_configured	= BBL.count_num_unique_entries(config.attribute_config)
-		max_num_types 			= #BBL.ATTRIBUTE_TYPES
+		max_num_types 			= #BBL.CONFIG_ATTRIBUTE_TYPES
 		src_exec 				= string.format("%d.%d", page, col + BBL.OFFSET.UNAPPLIED_ATTRIBUTE_CONFIGS)
 		dst_exec 				= string.format("%d.%d", page, col + BBL.OFFSET.APPLIED_ATTRIBUTE_CONFIGS)
 	else
@@ -799,7 +833,7 @@ local function add_to_group_config(group_num, type, config_num)
 		BBL.cmd(string.format('label exec %s cue %s "%s" /nc', dst_exec, config_num, BBL.RIGGING_TYPES[tonumber(config_num)]))
 		BBL.cmd(string.format('Assign exec %s cue %s /cmd="plugin 2 remove_from_group_config,%s,rigging,%s" /nc', dst_exec, config_num, group_num, config_num))
 	elseif type == "attribute" then
-		BBL.cmd(string.format('label exec %s cue %s "%s" /nc', dst_exec, config_num, BBL.ATTRIBUTE_TYPES[tonumber(config_num)]))
+		BBL.cmd(string.format('label exec %s cue %s "%s" /nc', dst_exec, config_num, BBL.CONFIG_ATTRIBUTE_TYPES[tonumber(config_num)]))
 		BBL.cmd(string.format('Assign exec %s cue %s /cmd="plugin 2 remove_from_group_config,%s,attribute,%s" /nc', dst_exec, config_num, group_num, config_num))
 	end
 	BBL.cmd(string.format('off exec %s', src_exec))
@@ -833,7 +867,7 @@ local function remove_from_group_config(group_num, type, config_num)
 	elseif type == "attribute" then
 		BBL.remove_value_from_array(config.attribute_config, config_num)
 		num_types_configured	= BBL.count_num_unique_entries(config.attribute_config)
-		max_num_types 			= #BBL.ATTRIBUTE_TYPES
+		max_num_types 			= #BBL.CONFIG_ATTRIBUTE_TYPES
 		src_exec 				= string.format("%d.%d", page, col + BBL.OFFSET.APPLIED_ATTRIBUTE_CONFIGS)
 		dst_exec 				= string.format("%d.%d", page, col + BBL.OFFSET.UNAPPLIED_ATTRIBUTE_CONFIGS)
 	else
@@ -864,7 +898,7 @@ local function remove_from_group_config(group_num, type, config_num)
 		BBL.cmd(string.format('label exec %s cue %s "%s" /nc', dst_exec, config_num, BBL.RIGGING_TYPES[tonumber(config_num)]))
 		BBL.cmd(string.format('Assign exec %s cue %s /cmd="plugin 2 add_to_group_config,%s,rigging,%s" /nc', dst_exec, config_num, group_num, config_num))
 	elseif type == "attribute" then
-		BBL.cmd(string.format('label exec %s cue %s "%s" /nc', dst_exec, config_num, BBL.ATTRIBUTE_TYPES[tonumber(config_num)]))
+		BBL.cmd(string.format('label exec %s cue %s "%s" /nc', dst_exec, config_num, BBL.CONFIG_ATTRIBUTE_TYPES[tonumber(config_num)]))
 		BBL.cmd(string.format('Assign exec %s cue %s /cmd="plugin 2 add_to_group_config,%s,attribute,%s" /nc', dst_exec, config_num, group_num, config_num))
 	end
 	BBL.cmd(string.format('off exec %s', src_exec))
