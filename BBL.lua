@@ -7,6 +7,8 @@ BBL = BBL or {}
 
 
 -------------------------- DEFINES Start --------------------------
+BBL.SCRIPT_VARIABLES_INITIALIZED	= "SCRIPT_VARIABLES_INITIALIZED"
+
 BBL.NEXT_AVAILABLE_GROUP			= "NEXT_AVAILABLE_GROUP"
 BBL.NEXT_AVAILABLE_EFFECT			= "NEXT_AVAILABLE_EFFECT"
 BBL.NEXT_AVAILABLE_SEQUENCE			= "NEXT_AVAILABLE_SEQUENCE"
@@ -24,8 +26,9 @@ BBL.FIRST_PRESET_COLOR 			= 1
 BBL.FIRST_PRESET_POS 			= 1
 BBL.FIRST_PRESET_GOBO 			= 1001
 BBL.FIRST_PRESET_PRISM 			= 1001
-BBL.FIRST_REMOTE				= "100.1"
-BBL.FIRST_REMOTE_FLIPPED		= "101.1"
+BBL.FIRST_REMOTE				= "100.1"		-- If changing this then the DMX remotes needs to be reconfigured
+BBL.FIRST_REMOTE_FLIPPED		= "101.1"		-- If changing this then the DMX remotes needs to be reconfigured
+BBL.FIRST_EXEC					= "1.101"
 
 
 
@@ -571,6 +574,39 @@ end
 BBL.reserve_next_available_pool_item = reserve_next_available_pool_item
 
 
+local function reserve_next_available_exec()
+	local success, return_val = pcall(function()
+	
+	local assumed_next_exec = BBL.getvar(string.format("NEXT_AVAILABLE_EXEC"))
+	if assumed_next_exec == nil then
+		error("ERROR in reserve_next_available_exec: Call to getvar() returned nil attempting to get uservar NEXT_AVAILABLE_EXEC")
+	end
+
+	-- Check if the exec is actually available, and if not, find the next one that is
+	local next_exec = assumed_next_exec
+	local item_occupied = true
+	while item_occupied == true do
+		local handle = gma.show.getobj.handle(string.format('%s %.0f',type , next_exec))
+		item_occupied = gma.show.getobj.verify(handle)
+		if item_occupied == true then
+			next_exec = next_exec + 1
+		end
+	end
+
+	BBL.setvar("NEXT_AVAILABLE_EXEC", string.format("%.0f", next_exec + 1))
+	BBL.add_to_nukelist(type, next_exec)
+	return next_exec
+
+	end)
+	if success ~= true then
+		BBL.print(string.format("ERROR in reserve_next_available_exec: %s", return_val))
+	end
+
+	return return_val
+end
+BBL.reserve_next_available_exec = reserve_next_available_exec
+
+
 local function reserve_next_available_remote(remote_type)
 	local success, return_val = pcall(function()
 
@@ -590,8 +626,7 @@ local function reserve_next_available_remote(remote_type)
 
 	local remote_exists = gma.show.getobj.verify(remote_handle)
 	if remote_exists == false then
-		BBL.print(string.format("Hello world:"))
-		error(string.format("ERROR in reserve_next_available_remote: %s %s does not appear to exist (probably out of bounds)", remote_type, next_available))
+yy		error(string.format("ERROR in reserve_next_available_remote: %s %s does not appear to exist (probably out of bounds)", remote_type, next_available))
 		return false, nil
 	end
 
@@ -814,12 +849,12 @@ local function add_to_group_config(group_num, type, config_num)
 	
 	-- Delete cue from add-exec
 	if num_types_configured == max_num_types then
-		if init == false and config_num ~= "1" then
+		if build_all_is_running == false and config_num ~= "1" then
 			BBL.cmd(string.format('store exec %s cue 1 /nc', src_exec))
 			BBL.cmd(string.format('label exec %s cue 1 "Empty" /nc', src_exec, config_num))
 			BBL.cmd(string.format('Assign exec %s cue 1 /cmd="off exec %s" /nc', src_exec, src_exec))
 			BBL.cmd(string.format('delete exec %s cue %s /nc', src_exec, config_num))
-		elseif init == true and config_num ~= "1" then
+		elseif build_all_is_running == true and config_num ~= "1" then
 			BBL.cmd(string.format('delete exec %s cue %s /nc', src_exec, config_num))
 		else
 			BBL.cmd(string.format('label exec %s cue 1 "Empty" /nc', src_exec, config_num))

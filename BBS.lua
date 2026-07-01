@@ -13,7 +13,7 @@ else
 end
 
 -- State variables
-local init = false
+local build_all_is_running = false
 
 
 
@@ -482,7 +482,7 @@ local function build_pbg_multiseqs()
 				-- Create cue
 				local selective = BBL.getvar(string.format('GROUP_%.0f_DIM_%.0f_SELECTIVE', group_num, template))
 				BBL.cmd("ClearAll")
-				BBL.cmd(string.format('selfix effect %.0f', selective))  
+				BBL.cmd(string.format('selfix effect %.0f', selective))
 				BBL.cmd(string.format('at effect %.0f', selective))
 				BBL.cmd(string.format('store cue %.0f sequence %.0f /o', template_num, multiseq))
 				-- BBL.cmd(string.format('assign sequence %.0f cue %.0f /cmd="%s"', multiseq, template_num, "Some_command"))
@@ -499,7 +499,13 @@ local function build_pbg_multiseqs()
 				table.remove(template_name, #template_name)
 				BBL.cmd(string.format('label sequence %.0f cue %.0f "%s"', multiseq, template_num, table.concat(template_name, " ")))
 			end	
-			BBL.cmd(string.format('delete cue %.0f thru sequence %.0f /o', #dim_templates + 1, multiseq))
+
+			local cue_after_last_created_handle = gma.show.getobj.handle(string.format('sequence %.0f cue %.0f', multiseq, #dim_templates + 1))
+			local cue_after_last_created_exists = gma.show.getobj.verify(cue_after_last_created_handle)
+			if cue_after_last_created_exists == true then
+				BBL.cmd(string.format('delete cue %.0f thru sequence %.0f /nc', #dim_templates + 1, multiseq))
+			end
+
 			BBL.cmd("BlindEdit off")
 
 			-- Label sequence and apply options
@@ -715,7 +721,13 @@ local function build_pbg()
 					pbg_frontend_button_sequence, cue_number, string.format('setuservar PBG_G%.0f_%s_ACTIVE %0.f', 
 					group_num, column_name, cue_number)))
 				end
-				BBL.cmd(string.format('delete sequence %.0f cue %.0f thru /nc', pbg_frontend_button_sequence, BBL.get_hashmap_size(sequence_content) + 1))
+				local cue_after_last_created_handle = gma.show.getobj.handle(string.format('sequence %.0f cue %.0f', pbg_frontend_button_sequence, BBL.get_hashmap_size(sequence_content) + 1))
+				local cue_after_last_created_exists = gma.show.getobj.verify(cue_after_last_created_handle)
+				if cue_after_last_created_exists == true then
+					BBL.cmd(string.format('delete sequence %.0f cue %.0f thru /nc', pbg_frontend_button_sequence, BBL.get_hashmap_size(sequence_content) + 1))
+				end
+
+				
 				local frontend_exec = string.format('%.0f.%.0f', BBL.PBG_FIRST_PAGE, row_offset + col_num - 1)
 				BBL.cmd(string.format('assign sequence %.0f exec %s', pbg_frontend_button_sequence, frontend_exec))
 				
@@ -826,11 +838,7 @@ local function build_pbg()
 
 	--------------------------------- Go active col on load ---------------------------------
 	-- TODO: Add handling for other column types
-	-- local active_col = BBL.getvar('ACTIVE_COL_DIM')
-	-- if active_col == nil then
-	-- 	active_col = columns[1]
-	-- 	setvar_and_mark_for_deletion_on_nuke('ACTIVE_COL_DIM', active_col)
-	-- end
+	BBL.add_to_var_nukelist("ACTIVE_COL_DIM")
 
 
 
@@ -841,13 +849,47 @@ local function build_pbg()
 end
 
 
+local function initialize_variables()
+	------- BBL.setvar("LEN_NUKELIST", "0")   THESE MUST BE INITIALIZED MANUALLY
+	------- BBL.setvar("LEN_VAR_NUKE", "0")   THESE MUST BE INITIALIZED MANUALLY
+	BBL.setvar("FIRST_AVAILABLE_GROUP", BBL.FIRST_AVAILABLE_GROUP)
+	BBL.setvar("FIRST_TEMPLATE_EFFECT", BBL.FIRST_TEMPLATE_EFFECT)
+	BBL.setvar("FIRST_SELECTIVE_EFFECT", BBL.FIRST_SELECTIVE_EFFECT)
+	BBL.setvar("FIRST_AVAILABLE_SEQUENCE", BBL.FIRST_AVAILABLE_SEQUENCE)
+	BBL.setvar("FIRST_AVAILABLE_MACRO", BBL.FIRST_AVAILABLE_MACRO)
+	BBL.setvar("FIRST_PRESET_DIM", BBL.FIRST_PRESET_DIM)
+	BBL.setvar("FIRST_PRESET_COLOR", BBL.FIRST_PRESET_COLOR)
+	BBL.setvar("FIRST_PRESET_POS", BBL.FIRST_PRESET_POS)
+	BBL.setvar("FIRST_PRESET_GOBO", BBL.FIRST_PRESET_GOBO)
+	BBL.setvar("FIRST_PRESET_PRISM", BBL.FIRST_PRESET_PRISM)
+	BBL.setvar("FIRST_REMOTE", BBL.FIRST_REMOTE)
+	BBL.setvar("FIRST_REMOTE_FLIPPED", BBL.FIRST_REMOTE_FLIPPED)
+	BBL.setvar("FIRST_EXEC", BBL.FIRST_EXEC)
+
+	BBL.setvar("NEXT_AVAILABLE_GROUP", BBL.FIRST_AVAILABLE_GROUP)
+	BBL.setvar("NEXT_AVAILABLE_EFFECT", BBL.FIRST_SELECTIVE_EFFECT)
+	BBL.setvar("NEXT_AVAILABLE_SEQUENCE", BBL.FIRST_AVAILABLE_SEQUENCE)
+	BBL.setvar("NEXT_AVAILABLE_MACRO", BBL.FIRST_AVAILABLE_MACRO)
+	BBL.setvar("NEXT_AVAILABLE_REMOTE", BBL.FIRST_REMOTE)
+	BBL.setvar("NEXT_AVAILABLE_REMOTE_FLIPPED", BBL.FIRST_REMOTE_FLIPPED)
+	BBL.setvar("NEXT_AVAILABLE_EXEC", BBL.FIRST_EXEC)
+	
+	gma.user.setvar(BBL.SCRIPT_VARIABLES_INITIALIZED, "TRUE")
+end
+
+
 local function build_all()
 	local success, err = pcall(function()
 
 	local startTime = os.clock()
-	init = true
+	build_all_is_running = true
 
+	local vars_initialized = gma.user.getvar(BBL.SCRIPT_VARIABLES_INITIALIZED)
+	if vars_initialized == nil or vars_initialized == "FALSE" then
+		initialize_variables()
+	end
 
+	
 	build_config_grid()
 	local gen_groups = BBL.get_gen_groups()
 	local group_config = {}
@@ -869,7 +911,7 @@ local function build_all()
 	BBL.cmd("ClearAll")
 	BBL.print("Script finished successfully! :)")
 
-	init = false
+	build_all_is_running = false
 
 	-- table.insert(group_config.rigging_config, 2, "1")
 	-- group_config.rigging_config[2] = "1"
@@ -947,16 +989,12 @@ local function nuke_all()
 		end
 	end
 
+	gma.user.setvar(BBL.SCRIPT_VARIABLES_INITIALIZED, "FALSE")
+
+
 	-- Reset next available remote. This assumes that what is stored in the target exec is 
 	-- nuked successfully by being added to the nukelist seperately from the reserve_next_available_remote method. 
 	
-	gma.user.setvar(BBL.NEXT_AVAILABLE_GROUP, 			BBL.FIRST_AVAILABLE_GROUP)
-	gma.user.setvar(BBL.NEXT_AVAILABLE_EFFECT, 			BBL.FIRST_SELECTIVE_EFFECT)
-	gma.user.setvar(BBL.NEXT_AVAILABLE_SEQUENCE, 		BBL.FIRST_AVAILABLE_SEQUENCE)
-	gma.user.setvar(BBL.NEXT_AVAILABLE_MACRO, 			BBL.FIRST_AVAILABLE_MACRO)
-	gma.user.setvar(BBL.NEXT_AVAILABLE_REMOTE, 			BBL.FIRST_REMOTE)
-	gma.user.setvar(BBL.NEXT_AVAILABLE_REMOTE_FLIPPED, 	BBL.FIRST_REMOTE_FLIPPED)
-
 	local endTime = os.clock()
 	BBL.print(string.format("Total nuke time: %.3f seconds", endTime - startTime))
 
@@ -1001,7 +1039,8 @@ local function main(args_string)
 		build_pbg							= build_pbg,
 		update_all							= update_all,
 		reserve_next_available_remote		= BBL.reserve_next_available_remote,
-		build_subgroups						= build_subgroups
+		build_subgroups						= build_subgroups,
+		initialize_variables				= initialize_variables
     }
 
 	
