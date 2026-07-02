@@ -28,7 +28,7 @@ BBL.FIRST_PRESET_GOBO 			= 1001
 BBL.FIRST_PRESET_PRISM 			= 1001
 BBL.FIRST_REMOTE				= "100.1"		-- If changing this then the DMX remotes needs to be reconfigured
 BBL.FIRST_REMOTE_FLIPPED		= "101.1"		-- If changing this then the DMX remotes needs to be reconfigured
-BBL.FIRST_EXEC					= "1.101"
+BBL.FIRST_EXEC					= "110.101"
 
 
 
@@ -55,10 +55,18 @@ local RECOGNIZED_POOL_OBJECTS = {
 	BBL.GROUP,
 	BBL.SEQUENCE,
 	BBL.EFFECT,
+	BBL.MACRO
+}
+BBL.RECOGNIZED_POOL_OBJECTS = RECOGNIZED_POOL_OBJECTS
+
+local RECOGNIZED_NUKELIST_OBJECTS = {
+	BBL.GROUP,
+	BBL.SEQUENCE,
+	BBL.EFFECT,
 	BBL.MACRO,
 	BBL.EXEC
 }
-BBL.RECOGNIZED_POOL_OBJECTS = RECOGNIZED_POOL_OBJECTS
+BBL.RECOGNIZED_NUKELIST_OBJECTS = RECOGNIZED_NUKELIST_OBJECTS
 
 
 BBL.DIM_STOMP_TEMPLATE_EFFECT		= "DIM_STOMP_TEMPLATE_EFFECT"
@@ -271,7 +279,7 @@ BBL.print_error_log = print_error_log
 local function add_to_nukelist(item_type, item_number)
 	local success, return_val = pcall(function()
 	
-		if BBL.is_recognized_pool_object(item_type) == false then
+		if BBL.is_recognized_nukelist_object(item_type) == false then
 			error("Attempted to add unrecognized item type: " .. item_type .. " with number: " .. item_number .. " to nukelist. Aborting.")
 			return
 		end
@@ -324,6 +332,18 @@ local function delete_group_config_variables()
 	end
 end
 BBL.delete_group_config_variables = delete_group_config_variables
+
+
+local function is_recognized_nukelist_object(item_type)
+	local item_type_lower = string.upper(item_type)
+	for _, recognized_type in ipairs(BBL.RECOGNIZED_NUKELIST_OBJECTS) do
+		if item_type_lower == recognized_type then
+			return true
+		end
+	end
+	return false
+end
+BBL.is_recognized_nukelist_object = is_recognized_nukelist_object
 
 ---------------------------------------------------------------------
 ----------------------------- ARRAY/HASHMAP -------------------------
@@ -586,15 +606,15 @@ local function reserve_next_available_exec()
 	local next_exec = assumed_next_exec
 	local item_occupied = true
 	while item_occupied == true do
-		local handle = gma.show.getobj.handle(string.format('%s %.0f',type , next_exec))
+		local handle = gma.show.getobj.handle(string.format('%s %.0f', BBL.EXEC , next_exec))
 		item_occupied = gma.show.getobj.verify(handle)
 		if item_occupied == true then
-			next_exec = next_exec + 1
+			next_exec = BBL.increment_exec_button_number(next_exec)
 		end
 	end
 
-	BBL.setvar("NEXT_AVAILABLE_EXEC", string.format("%.0f", next_exec + 1))
-	BBL.add_to_nukelist(type, next_exec)
+	BBL.setvar("NEXT_AVAILABLE_EXEC", BBL.increment_exec_button_number(next_exec))
+	BBL.add_to_nukelist(BBL.EXEC, next_exec)
 	return next_exec
 
 	end)
@@ -626,7 +646,7 @@ local function reserve_next_available_remote(remote_type)
 
 	local remote_exists = gma.show.getobj.verify(remote_handle)
 	if remote_exists == false then
-yy		error(string.format("ERROR in reserve_next_available_remote: %s %s does not appear to exist (probably out of bounds)", remote_type, next_available))
+		error(string.format("ERROR in reserve_next_available_remote: %s %s does not appear to exist (probably out of bounds)", remote_type, next_available))
 		return false, nil
 	end
 
@@ -659,6 +679,25 @@ yy		error(string.format("ERROR in reserve_next_available_remote: %s %s does not 
 	return return_val
 end
 BBL.reserve_next_available_remote = reserve_next_available_remote
+
+
+local function increment_exec_button_number(exec)
+	local exec_split = BBL.split_string_into_array(exec, "%.")
+	local cur_page = tonumber(exec_split[1])
+	local cur_button = tonumber(exec_split[2])
+	
+	BBL.print(string.format(string.format("in increment: exec number before incrementing = %s", exec)))
+
+	if cur_button == 190 then
+		BBL.print(string.format(string.format("in increment: exec number after incrementing = %.0f.%.0f", cur_page + 1, 101)))
+		return string.format("%.0f.%.0f", cur_page + 1, 101)
+	else
+		BBL.print(string.format(string.format("in increment: exec number after incrementing = %.0f.%.0f", cur_page, cur_button + 1)))
+		return string.format("%.0f.%.0f", cur_page, cur_button + 1)
+	end
+	
+end
+BBL.increment_exec_button_number = increment_exec_button_number
 
 
 local function get_sequence_as_hashmap(sequence_number)

@@ -454,6 +454,11 @@ local function build_selectives()
 end
 
 
+local function build_multiseq(pool_type, param_type, first_object_to_generate_from)
+	local next_exec = BBL.reserve_next_available_exec()
+	BBL.print('next available exec = ' .. next_exec)
+end
+
 local function build_pbg_multiseqs()
 	local success, err = pcall(function()
 
@@ -672,7 +677,6 @@ local function build_multiseqs()
 		BBL.print(string.format("ERROR in build_multiseqs: %s", err))
 	end
 end
-
 
 
 local function build_pbg()
@@ -1041,6 +1045,7 @@ local function main(args_string)
 		build_default_group_config_buttons	= build_config_grid,
 		delete_group_config_variables		= BBL.delete_group_config_variables,
 		build_selectives					= build_selectives,
+		build_multiseq 						= build_multiseq(BBL.EXEC),
 		build_multiseqs						= build_multiseqs,
 		build_pbg							= build_pbg,
 		update_all							= update_all,
